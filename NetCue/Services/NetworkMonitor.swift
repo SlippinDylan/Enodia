@@ -50,6 +50,14 @@ final class NetworkMonitor {
     private var scenes: [NetworkScene] = []
     private var dnsScenes: [DNSScene] = []
     private var currentMatchedDNSScene: DNSScene?
+    private var sceneMatchTask: Task<Void, Never>?
+    private var sceneMatchRetryTask: Task<Void, Never>?
+    private var hasPendingSceneMatch = false
+    private var pendingSceneMatchTriggeredByNetworkChange = false
+    private var pendingAppsToLaunch: Set<String> = []
+    private var appLaunchRetryCounts: [String: Int] = [:]
+
+    private static let maxAppLaunchAttempts = 3
 
     /// 上次通知的匹配场景 ID 集合（用于去重通知）
     ///
@@ -115,10 +123,7 @@ final class NetworkMonitor {
         AppLogger.debug("场景详情: \(newScenes.map { "[\($0.name): \($0.isEnabled ? "启用" : "禁用")]" }.joined(separator: ", "))")
 
         self.scenes = newScenes
-        // 场景配置变化，触发检查（可能需要发送通知）
-        Task {
-            await checkAndHandleSceneMatch(triggeredByNetworkChange: false)
-        }
+        requestSceneMatch(triggeredByNetworkChange: false)
 
         AppLogger.info("✅ 网络场景列表更新完成")
     }
@@ -189,6 +194,14 @@ final class NetworkMonitor {
 
         pathMonitor?.cancel()
         pathMonitor = nil
+        sceneMatchTask?.cancel()
+        sceneMatchTask = nil
+        sceneMatchRetryTask?.cancel()
+        sceneMatchRetryTask = nil
+        hasPendingSceneMatch = false
+        pendingSceneMatchTriggeredByNetworkChange = false
+        pendingAppsToLaunch.removeAll()
+        appLaunchRetryCounts.removeAll()
 
         AppLogger.info("✅ 网络监控已停止")
     }
@@ -247,9 +260,7 @@ final class NetworkMonitor {
             AppLogger.info("✅ 网络信息已更新: \(self.currentNetworkType), 路由器=\(routerIP)")
 
             // 网络信息更新后检查场景匹配（网络变化触发，需要发送通知）
-            Task {
-                await self.checkAndHandleSceneMatch(triggeredByNetworkChange: true)
-            }
+            self.requestSceneMatch(triggeredByNetworkChange: true)
 
             // 检查 DNS 场景匹配
             self.checkAndHandleDNSSceneMatch()
@@ -273,6 +284,51 @@ final class NetworkMonitor {
 
     // MARK: - Private Methods - Scene Matching
 
+    private func requestSceneMatch(triggeredByNetworkChange: Bool) {
+        sceneMatchRetryTask?.cancel()
+        sceneMatchRetryTask = nil
+        hasPendingSceneMatch = true
+        pendingSceneMatchTriggeredByNetworkChange =
+            pendingSceneMatchTriggeredByNetworkChange || triggeredByNetworkChange
+
+        guard sceneMatchTask == nil else { return }
+
+        sceneMatchTask = Task { [weak self] in
+            await self?.processPendingSceneMatches()
+        }
+    }
+
+    private func processPendingSceneMatches() async {
+        while hasPendingSceneMatch && !Task.isCancelled {
+            hasPendingSceneMatch = false
+            let triggeredByNetworkChange = pendingSceneMatchTriggeredByNetworkChange
+            pendingSceneMatchTriggeredByNetworkChange = false
+
+            await checkAndHandleSceneMatch(
+                triggeredByNetworkChange: triggeredByNetworkChange
+            )
+        }
+
+        sceneMatchTask = nil
+        scheduleAppLaunchRetryIfNeeded()
+    }
+
+    private func scheduleAppLaunchRetryIfNeeded() {
+        guard !pendingAppsToLaunch.isEmpty, !Task.isCancelled else { return }
+
+        sceneMatchRetryTask = Task { [weak self] in
+            do {
+                try await Task.sleep(for: .seconds(5))
+            } catch {
+                return
+            }
+
+            guard let self, !Task.isCancelled else { return }
+            self.sceneMatchRetryTask = nil
+            self.requestSceneMatch(triggeredByNetworkChange: false)
+        }
+    }
+
     /// 检查并处理网络场景匹配
     ///
     /// ## 功能说明
@@ -293,6 +349,17 @@ final class NetworkMonitor {
             availableScenes: scenes,
             previousMatches: matchedScenes
         )
+        let controlledApps = Set(result.matchedScenes.flatMap(\.controlApps))
+        pendingAppsToLaunch.subtract(controlledApps)
+        for appName in controlledApps {
+            appLaunchRetryCounts.removeValue(forKey: appName)
+        }
+        for appName in result.appsToLaunch where !pendingAppsToLaunch.contains(appName) {
+            appLaunchRetryCounts[appName] = 0
+        }
+        let appsToLaunch = Set(result.appsToLaunch)
+            .union(pendingAppsToLaunch)
+            .sorted()
 
         // 收集应用控制结果
         var quitSuccessApps: [String] = []
@@ -302,6 +369,8 @@ final class NetworkMonitor {
 
         // ✅ 使用 AppControlService 退出应用
         for appName in result.appsToQuit {
+            guard !Task.isCancelled else { return }
+
             let controlResult = appControlService.quit(appName)
             if controlResult.success {
                 quitSuccessApps.append(appName)
@@ -311,15 +380,30 @@ final class NetworkMonitor {
         }
 
         // ✅ 使用 AppControlService 启动应用
-        for appName in result.appsToLaunch {
+        for appName in appsToLaunch {
+            guard !Task.isCancelled else { return }
+
             if result.isFallback {
                 AppLogger.info("🚀 [Fallback] 启动应用: \(appName)")
             }
             let controlResult = await appControlService.launch(appName)
+            guard !Task.isCancelled else { return }
+
             if controlResult.success {
                 launchSuccessApps.append(appName)
+                pendingAppsToLaunch.remove(appName)
+                appLaunchRetryCounts.removeValue(forKey: appName)
             } else {
                 launchFailedApps.append(appName)
+                let attempts = (appLaunchRetryCounts[appName] ?? 0) + 1
+                if attempts < Self.maxAppLaunchAttempts {
+                    appLaunchRetryCounts[appName] = attempts
+                    pendingAppsToLaunch.insert(appName)
+                } else {
+                    appLaunchRetryCounts.removeValue(forKey: appName)
+                    pendingAppsToLaunch.remove(appName)
+                    AppLogger.warning("启动应用 \(appName) 已连续失败 \(attempts) 次，停止自动重试")
+                }
             }
         }
 

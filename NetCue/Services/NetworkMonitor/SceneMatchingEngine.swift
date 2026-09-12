@@ -86,32 +86,24 @@ final class SceneMatchingEngine {
             scenes: availableScenes
         )
 
-        var appsToQuit: [String] = []
-        let appsToLaunch: [String] = []
-        let isFallback = false
+        let oldApps = Set(previousMatches.flatMap(\.controlApps))
+        let newApps = Set(newMatchedScenes.flatMap(\.controlApps))
+
+        let appsToQuit = newApps.subtracting(oldApps).sorted()
+        let appsToLaunch = oldApps.subtracting(newApps).sorted()
+        let isFallback = newMatchedScenes.isEmpty && !appsToLaunch.isEmpty
 
         if newMatchedScenes.isEmpty {
             AppLogger.debug("未匹配到任何网络场景")
         } else {
             AppLogger.info("✅ 匹配到 \(newMatchedScenes.count) 个网络场景: \(newMatchedScenes.map { $0.name }.joined(separator: ", "))")
+        }
 
-            // 收集旧场景中的所有控制应用
-            var oldApps = Set<String>()
-            for scene in previousMatches {
-                oldApps.formUnion(scene.controlApps)
-            }
-
-            // 收集新场景中的所有控制应用
-            var newApps = Set<String>()
-            for scene in newMatchedScenes {
-                newApps.formUnion(scene.controlApps)
-            }
-
-            // 找出新增的应用（需要退出）
-            appsToQuit = Array(newApps.subtracting(oldApps))
-            if !appsToQuit.isEmpty {
-                AppLogger.info("需要退出的应用: \(appsToQuit.joined(separator: ", "))")
-            }
+        if !appsToQuit.isEmpty {
+            AppLogger.info("需要退出的应用: \(appsToQuit.joined(separator: ", "))")
+        }
+        if !appsToLaunch.isEmpty {
+            AppLogger.info("需要启动的应用: \(appsToLaunch.joined(separator: ", "))")
         }
 
         AppLogger.debug("场景匹配检查完成")
