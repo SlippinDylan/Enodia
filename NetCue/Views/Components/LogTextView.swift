@@ -17,6 +17,8 @@ import AppKit
 /// - 只读模式
 /// - 支持深色模式
 struct LogTextView: NSViewRepresentable {
+    private static let terminalBackground = NSColor(calibratedWhite: 0.055, alpha: 1)
+
     // MARK: - Properties
 
     /// 日志条目数组
@@ -34,8 +36,9 @@ struct LogTextView: NSViewRepresentable {
         textView.isSelectable = true
         textView.allowsUndo = false
         textView.font = NSFont.monospacedSystemFont(ofSize: 12, weight: .regular)
-        textView.textColor = .labelColor
-        textView.backgroundColor = .textBackgroundColor
+        textView.textColor = NSColor(calibratedWhite: 0.9, alpha: 1)
+        textView.backgroundColor = Self.terminalBackground
+        textView.textContainerInset = NSSize(width: 12, height: 12)
         textView.autoresizingMask = [.width]
         textView.textContainer?.containerSize = NSSize(width: 0, height: CGFloat.greatestFiniteMagnitude)
         textView.textContainer?.widthTracksTextView = true
@@ -45,15 +48,12 @@ struct LogTextView: NSViewRepresentable {
         scrollView.documentView = textView
         scrollView.hasVerticalScroller = true
         scrollView.hasHorizontalScroller = true
+        scrollView.drawsBackground = true
+        scrollView.backgroundColor = Self.terminalBackground
 
         // 强制 Overlay 模式（与 NetCueScrollView 一致）
         scrollView.scrollerStyle = .overlay
         scrollView.autohidesScrollers = true
-
-        // 添加圆角
-        scrollView.wantsLayer = true
-        scrollView.layer?.cornerRadius = 8
-        scrollView.layer?.masksToBounds = true
 
         return scrollView
     }

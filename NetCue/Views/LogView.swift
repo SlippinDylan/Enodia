@@ -11,8 +11,8 @@ import UniformTypeIdentifiers
 /// 日志查看器主界面
 ///
 /// 集成了：
-/// - LogToolbar：搜索/筛选卡片（无标题）
-/// - LogTextView：日志文本显示（NSTextView，卡片包裹）
+/// - LogToolbar：搜索与筛选工具栏
+/// - LogTextView：终端风格日志文本显示
 /// - 底部统计信息
 /// - LogStore：日志数据源
 struct LogView: View {
@@ -70,51 +70,52 @@ struct LogView: View {
     // MARK: - Body
 
     var body: some View {
-        NetCueScrollView {
+        VStack(spacing: 0) {
             VStack(spacing: 0) {
-                // 搜索/筛选工具栏（卡片，无标题）
-                LogToolbar(
-                    searchText: $searchText,
-                    selectedLevel: $selectedLevel,
-                    onClear: clearLogs,
-                    onExport: exportLogs
-                )
-                .padding(.horizontal, DesignSystem.Spacing.standard)
-                .padding(.top, DesignSystem.Spacing.standard)
+                if filteredLogs.isEmpty {
+                    emptyStateView
+                } else {
+                    LogTextView(
+                        entries: filteredLogs,
+                        autoScroll: false
+                    )
+                    .frame(maxHeight: .infinity)
 
-                // 日志内容卡片（无标题）
-                GroupBox {
-                    VStack(spacing: 0) {
-                        // 日志内容区域
-                        if filteredLogs.isEmpty {
-                            emptyStateView
-                        } else {
-                            LogTextView(
-                                entries: filteredLogs,
-                                autoScroll: false // 移除自动滚动
-                            )
-                            .frame(minHeight: 500, maxHeight: .infinity)
-                        }
+                    Divider()
+                        .overlay(Color.white.opacity(0.12))
 
-                        // 底部统计信息
-                        if !filteredLogs.isEmpty {
-                            Divider()
+                    HStack {
+                        Text(statistics)
+                            .font(.caption.monospaced())
+                            .foregroundStyle(Color.white.opacity(0.65))
 
-                            HStack {
-                                Text(statistics)
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-
-                                Spacer()
-                            }
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 8)
-                            .background(Color(nsColor: .controlBackgroundColor).opacity(0.5))
-                        }
+                        Spacer()
                     }
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
+                    .background(Color.black.opacity(0.88))
                 }
-                .padding(.horizontal, DesignSystem.Spacing.standard)
-                .padding(.top, DesignSystem.Spacing.standard)
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background(Color.black.opacity(0.94))
+            .clipShape(RoundedRectangle(cornerRadius: DesignSystem.CornerRadius.large))
+            .overlay {
+                RoundedRectangle(cornerRadius: DesignSystem.CornerRadius.large)
+                    .stroke(Color.white.opacity(0.1), lineWidth: 1)
+            }
+        }
+        .padding(DesignSystem.Spacing.standard)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .toolbar {
+            if #available(macOS 26, *) {
+                ToolbarItem(placement: .principal) {
+                    toolbarContent
+                }
+                .sharedBackgroundVisibility(.hidden)
+            } else {
+                ToolbarItem(placement: .principal) {
+                    toolbarContent
+                }
             }
         }
         .fileExporter(
@@ -132,23 +133,34 @@ struct LogView: View {
         }
     }
 
+    private var toolbarContent: some View {
+        LogToolbar(
+            searchText: $searchText,
+            selectedLevel: $selectedLevel,
+            onClear: clearLogs,
+            onExport: exportLogs
+        )
+        .frame(minWidth: 680, maxWidth: .infinity)
+    }
+
     // MARK: - Empty State View
 
     private var emptyStateView: some View {
         VStack(spacing: 16) {
             Image(systemName: "doc.text.magnifyingglass")
                 .font(.system(size: 48))
-                .foregroundStyle(.secondary)
+                .foregroundStyle(Color.white.opacity(0.55))
 
             VStack(spacing: 8) {
                 Text("暂无日志")
                     .font(.title3)
                     .fontWeight(.medium)
+                    .foregroundStyle(.white)
 
                 if !searchText.isEmpty || selectedLevel != nil {
                     Text("未找到匹配的日志，请尝试其他筛选条件")
                         .font(.caption)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(Color.white.opacity(0.55))
 
                     Button("清除筛选条件") {
                         searchText = ""
@@ -159,7 +171,7 @@ struct LogView: View {
                 } else {
                     Text("应用运行时产生的日志将在此显示")
                         .font(.caption)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(Color.white.opacity(0.55))
                 }
             }
         }

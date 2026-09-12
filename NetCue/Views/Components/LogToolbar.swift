@@ -7,7 +7,7 @@
 
 import SwiftUI
 
-/// 日志工具栏（搜索/筛选卡片）
+/// 日志工具栏
 ///
 /// 提供以下功能：
 /// - 按级别过滤（纯文字）
@@ -25,72 +25,118 @@ struct LogToolbar: View {
     let onClear: () -> Void
     let onExport: () -> Void
 
-    // MARK: - Body
+    private let filterOptions: [LogLevel?] = [nil] + LogLevel.allCases.map(Optional.some)
 
     var body: some View {
-        GroupBox {
-            HStack(spacing: 12) {
-                // 级别筛选（平铺显示所有选项）
-                Picker("", selection: $selectedLevel) {
-                    Text("全部").tag(nil as LogLevel?)
-                    ForEach(LogLevel.allCases, id: \.self) { level in
-                        Text(level.displayName).tag(level as LogLevel?)
-                    }
-                }
-                .pickerStyle(.segmented)
-                .help("按日志级别过滤")
+        HStack(spacing: 12) {
+            filterControl
+                .fixedSize()
 
-                // 内容搜索
-                HStack(spacing: 4) {
-                    Image(systemName: "magnifyingglass")
+            searchControl
+                .layoutPriority(1)
+
+            actionControls
+                .fixedSize()
+        }
+    }
+
+    private var filterControl: some View {
+        HStack(spacing: 0) {
+            ForEach(filterOptions, id: \.self) { level in
+                let isSelected = selectedLevel == level
+
+                Button {
+                    selectedLevel = level
+                } label: {
+                    Text(filterTitle(for: level))
+                        .font(.system(size: 12, weight: isSelected ? .semibold : .regular))
+                        .foregroundStyle(isSelected ? Color.white : Color.primary)
+                        .frame(minWidth: 52)
+                        .frame(height: 28)
+                        .background(isSelected ? Color.accentColor : Color.clear, in: Capsule())
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(2)
+        .logToolbarGlass()
+        .help("按日志级别过滤")
+    }
+
+    private var searchControl: some View {
+        HStack(spacing: 4) {
+            Image(systemName: "magnifyingglass")
+                .foregroundStyle(.secondary)
+                .imageScale(DesignSystem.IconScale.small)
+
+            TextField("搜索内容...", text: $searchText)
+                .textFieldStyle(.plain)
+
+            if !searchText.isEmpty {
+                Button {
+                    searchText = ""
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
                         .foregroundStyle(.secondary)
                         .imageScale(DesignSystem.IconScale.small)
-
-                    TextField("搜索内容...", text: $searchText)
-                        .textFieldStyle(.plain)
-                        .frame(width: 200)
-
-                    if !searchText.isEmpty {
-                        Button(action: {
-                            searchText = ""
-                        }) {
-                            Image(systemName: "xmark.circle.fill")
-                                .foregroundStyle(.secondary)
-                                .imageScale(DesignSystem.IconScale.small)
-                        }
-                        .buttonStyle(.plain)
-                    }
                 }
-                .padding(.horizontal, 8)
-                .padding(.vertical, 4)
-                .background(Color(nsColor: .textBackgroundColor))
-                .clipShape(RoundedRectangle(cornerRadius: DesignSystem.CornerRadius.medium))
-                .overlay(
-                    RoundedRectangle(cornerRadius: DesignSystem.CornerRadius.medium)
-                        .stroke(Color.gray.opacity(0.3), lineWidth: 1)
-                )
-
-                Spacer()
-
-                // 操作按钮（最右侧）
-                HStack(spacing: 8) {
-                    Button("清空") {
-                        onClear()
-                    }
-                    .buttonStyle(.borderedProminent)
-                    .tint(.red)
-                    .controlSize(.small)
-                    .help("清空所有日志")
-
-                    Button("导出") {
-                        onExport()
-                    }
-                    .adaptiveGlassProminentButtonStyle()
-                    .controlSize(.small)
-                    .help("导出日志到文件")
-                }
+                .buttonStyle(.plain)
             }
-            .padding(12)
+        }
+        .padding(.horizontal, 10)
+        .frame(minWidth: 160, idealWidth: 240, maxWidth: .infinity)
+        .frame(height: 32)
+        .logToolbarGlass()
+    }
+
+    private var actionControls: some View {
+        HStack(spacing: 8) {
+            Button {
+                onClear()
+            } label: {
+                Text("清空")
+                    .font(.callout.weight(.medium))
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 14)
+                    .frame(height: 32)
+                    .logToolbarGlass(tint: .red)
+            }
+            .buttonStyle(.plain)
+            .help("清空所有日志")
+
+            Button {
+                onExport()
+            } label: {
+                Text("导出")
+                    .font(.callout.weight(.medium))
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 14)
+                    .frame(height: 32)
+                    .logToolbarGlass(tint: .accentColor)
+            }
+            .buttonStyle(.plain)
+            .help("导出日志到文件")
+        }
+    }
+
+    private func filterTitle(for level: LogLevel?) -> String {
+        level?.displayName.trimmingCharacters(in: .whitespaces) ?? "全部"
+    }
+}
+
+private extension View {
+    @ViewBuilder
+    func logToolbarGlass(tint: Color? = nil) -> some View {
+        if #available(macOS 26, *) {
+            glassEffect(.regular.tint(tint).interactive(), in: Capsule())
+        } else if let tint {
+            background(tint, in: Capsule())
+        } else {
+            background(Color(nsColor: .controlBackgroundColor), in: Capsule())
+                .overlay {
+                    Capsule()
+                        .stroke(Color.gray.opacity(0.25), lineWidth: 1)
+                }
         }
     }
 }

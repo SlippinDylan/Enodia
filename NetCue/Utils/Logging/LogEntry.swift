@@ -118,7 +118,7 @@ struct LogEntry: Identifiable, Sendable {
             string: "[\(timestampStr)] ",
             attributes: [
                 .font: baseFont,
-                .foregroundColor: NSColor.systemGray
+                .foregroundColor: NSColor(calibratedWhite: 0.58, alpha: 1)
             ]
         ))
 
@@ -131,12 +131,12 @@ struct LogEntry: Identifiable, Sendable {
             ]
         ))
 
-        // emoji + 消息（主文本颜色）
+        // emoji + 消息（终端主文本颜色）
         result.append(NSAttributedString(
             string: "\(level.emoji) \(message) ",
             attributes: [
                 .font: baseFont,
-                .foregroundColor: NSColor.labelColor  // 自动适配深色模式
+                .foregroundColor: NSColor(calibratedWhite: 0.9, alpha: 1)
             ]
         ))
 
@@ -146,7 +146,7 @@ struct LogEntry: Identifiable, Sendable {
             string: locationStr,
             attributes: [
                 .font: baseFont,
-                .foregroundColor: NSColor.secondaryLabelColor
+                .foregroundColor: NSColor(calibratedWhite: 0.55, alpha: 1)
             ]
         ))
 
