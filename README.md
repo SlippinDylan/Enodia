@@ -1,8 +1,8 @@
-# NetCue
+# Enodia
 
 **一个住在菜单栏里的网络自动化工具。**
 
-切换网络、换 DNS、查 IP、检测代理风险，全都在一个地方搞定。不需要每次手动改配置，设好场景规则，NetCue 自动帮你做。
+切换网络、换 DNS、查 IP、检测代理风险，全都在一个地方搞定。不需要每次手动改配置，设好场景规则，Enodia 自动帮你做。
 
 <br>
 
@@ -43,12 +43,12 @@
 > **系统要求**：macOS 15.0 (Sequoia) 及以上
 
 1. 前往 [Releases](../../releases) 页面，下载最新的 `.dmg` 文件
-2. 双击挂载，把 **NetCue.app** 拖到 Applications 文件夹
+2. 双击挂载，把 **Enodia.app** 拖到 Applications 文件夹
 3. 由于没有 Apple 公证，首次安装需要在终端执行一下：
    ```bash
-   sudo xattr -rd com.apple.quarantine /Applications/NetCue.app
+   sudo xattr -rd com.apple.quarantine /Applications/Enodia.app
    ```
-4. 打开 NetCue，进入 **设置** → 点击 **安装 Helper**（需要输入密码，用于 DNS 管理等需要权限的操作）
+4. 打开 Enodia，进入 **设置** → 点击 **安装 Helper**（需要输入密码，用于 DNS 管理等需要权限的操作）
 
 <br>
 
@@ -64,22 +64,22 @@
 
 1. Clone 仓库
    ```bash
-   git clone https://github.com/你的用户名/NetCue.git
-   cd NetCue
+   git clone https://github.com/你的用户名/Enodia.git
+   cd Enodia
    ```
 
-2. 用 Xcode 打开 `NetCue.xcodeproj`，在 **Signing & Capabilities** 里把 Team 改成你自己的 Apple ID
+2. 用 Xcode 打开 `Enodia.xcodeproj`，在 **Signing & Capabilities** 里把 Team 改成你自己的 Apple ID
 
 3. 更新 Helper 的安全校验字符串，把两个文件里的占位符换成你自己的 Apple ID 和 Team ID：
 
-   **`NetCue/Info.plist`**
+   **`Enodia/Info.plist`**
    ```xml
    <string>identifier "...helper" and anchor apple generic and certificate leaf[subject.CN] = "Apple Development: YOUR_APPLE_ID@example.com (YOUR_TEAM_ID)" ...</string>
    ```
 
-   **`NetCueHelper/Info.plist`**
+   **`EnodiaHelper/Info.plist`**
    ```xml
-   <string>identifier "...NetCue" and anchor apple generic and certificate leaf[subject.CN] = "Apple Development: YOUR_APPLE_ID@example.com (YOUR_TEAM_ID)" ...</string>
+   <string>identifier "...Enodia" and anchor apple generic and certificate leaf[subject.CN] = "Apple Development: YOUR_APPLE_ID@example.com (YOUR_TEAM_ID)" ...</string>
    ```
 
    > 你的 Team ID 可以在 Xcode → Settings → Accounts 里看到，也可以跑 `security find-identity -v -p codesigning` 查。
