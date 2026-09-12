@@ -46,6 +46,8 @@ struct SettingsView: View {
                 // 权限状态
                 permissionsSection
             }
+            .frame(maxWidth: 960)
+            .frame(maxWidth: .infinity)
             .padding()
         }
         .onAppear {
@@ -72,37 +74,40 @@ struct SettingsView: View {
 
     private var generalSettingsSection: some View {
         GroupBox {
-            VStack(alignment: .leading, spacing: 12) {
-                HStack {
+            HStack(spacing: DesignSystem.Spacing.standard) {
+                VStack(alignment: .leading, spacing: DesignSystem.Spacing.extraSmall) {
                     Text("登录时自动启动")
                         .font(.body)
-
-                    Spacer()
-
-                    Toggle("", isOn: Binding(
-                        get: { loginItemManager.isEnabled },
-                        set: { newValue in
-                            do {
-                                if newValue {
-                                    try loginItemManager.enable()
-                                } else {
-                                    try loginItemManager.disable()
-                                }
-                            } catch {
-                                AppLogger.error("更改开机自启状态失败", error: error)
-                                loginItemManager.refreshStatus()
-                            }
-                        }
-                    ))
-                    .labelsHidden()
-                    .toggleStyle(.switch)
+                    Text("登录系统后自动运行 NetCue")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
                 }
+
+                Spacer()
+
+                Toggle("", isOn: Binding(
+                    get: { loginItemManager.isEnabled },
+                    set: { newValue in
+                        do {
+                            if newValue {
+                                try loginItemManager.enable()
+                            } else {
+                                try loginItemManager.disable()
+                            }
+                        } catch {
+                            AppLogger.error("更改开机自启状态失败", error: error)
+                            loginItemManager.refreshStatus()
+                        }
+                    }
+                ))
+                .labelsHidden()
+                .toggleStyle(.switch)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(DesignSystem.Spacing.standard)
         } label: {
             SectionHeader(
-                title: "登录启动设置",
+                title: "通用",
                 icon: "gearshape",
                 iconColor: .gray,
                 description: "应用基本行为"
@@ -114,42 +119,35 @@ struct SettingsView: View {
 
     private var mihomoHostAppSection: some View {
         GroupBox {
-            HStack(spacing: 16) {
-                // 左侧：当前关联状态
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("关联你正在使用的 Clash/Mihomo 客户端，用于在替换内核前检测该应用是否正在运行。")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+            HStack(spacing: DesignSystem.Spacing.standard) {
+                Image(systemName: mihomoViewModel.config.hasAssociatedApp ? "checkmark.circle.fill" : "circle.dashed")
+                    .foregroundStyle(mihomoViewModel.config.hasAssociatedApp ? .green : .secondary)
 
-                    HStack(spacing: 4) {
-                        Image(systemName: mihomoViewModel.config.hasAssociatedApp ? "checkmark.circle.fill" : "xmark.circle.fill")
-                            .foregroundStyle(mihomoViewModel.config.hasAssociatedApp ? .green : .orange)
-                            .font(.system(size: 12))
-                        Text(mihomoViewModel.config.hasAssociatedApp ? mihomoViewModel.config.appDisplayName : "未关联任何应用")
-                            .font(.caption)
-                            .foregroundStyle(mihomoViewModel.config.hasAssociatedApp ? Color.green : Color.orange)
-                    }
-
-                    if mihomoViewModel.config.hasAssociatedApp {
-                        Text(mihomoViewModel.config.appBundleIdentifier)
-                            .font(.caption2)
-                            .foregroundStyle(.secondary)
-                    }
+                VStack(alignment: .leading, spacing: DesignSystem.Spacing.extraSmall) {
+                    Text(mihomoViewModel.config.hasAssociatedApp ? mihomoViewModel.config.appDisplayName : "未关联应用")
+                        .font(.body)
+                        .fontWeight(.medium)
+                    Text(
+                        mihomoViewModel.config.hasAssociatedApp
+                            ? mihomoViewModel.config.appBundleIdentifier
+                            : "选择正在使用的 Clash/Mihomo 客户端"
+                    )
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
                 }
-                .frame(maxWidth: .infinity, alignment: .leading)
 
-                // 右侧按钮
-                HStack(spacing: 8) {
+                Spacer()
+
+                HStack(spacing: DesignSystem.Spacing.small) {
                     if mihomoViewModel.config.hasAssociatedApp {
                         Button("取消关联") {
                             mihomoViewModel.clearHostApp()
                         }
-                        .buttonStyle(.borderedProminent)
-                        .tint(.orange)
+                        .adaptiveGlassButtonStyle()
                         .disabled(mihomoViewModel.isSelectingHostApp)
                     }
 
-                    Button("选择应用…") {
+                    Button(mihomoViewModel.config.hasAssociatedApp ? "更换应用…" : "选择应用…") {
                         mihomoViewModel.selectHostApp()
                     }
                     .adaptiveGlassProminentButtonStyle()
@@ -171,17 +169,18 @@ struct SettingsView: View {
 
     private var exportImportSection: some View {
         GroupBox {
-            HStack(spacing: 16) {
-                // 左侧说明
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("导出配置后可在重新安装时快速恢复，包括应用控制场景、DNS 控制场景和 API Key 配置。")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
+            VStack(alignment: .leading, spacing: DesignSystem.Spacing.medium) {
+                HStack(spacing: DesignSystem.Spacing.standard) {
+                    VStack(alignment: .leading, spacing: DesignSystem.Spacing.extraSmall) {
+                        Text("导入配置")
+                            .font(.body)
+                        Text("从备份文件覆盖当前应用设置")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
 
-                // 右侧按钮
-                HStack(spacing: 8) {
+                    Spacer()
+
                     Button {
                         performImport()
                     } label: {
@@ -193,9 +192,22 @@ struct SettingsView: View {
                             Text("导入配置")
                         }
                     }
-                    .buttonStyle(.borderedProminent)
-                    .tint(.orange)
+                    .adaptiveGlassButtonStyle()
                     .disabled(isImporting || isExporting)
+                }
+
+                Divider()
+
+                HStack(spacing: DesignSystem.Spacing.standard) {
+                    VStack(alignment: .leading, spacing: DesignSystem.Spacing.extraSmall) {
+                        Text("导出配置")
+                            .font(.body)
+                        Text("将场景、DNS、API Key 和 Mihomo 设置保存为文件")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+
+                    Spacer()
 
                     Button {
                         performExport()
@@ -306,58 +318,9 @@ struct SettingsView: View {
     private var apiKeySettingsSection: some View {
         GroupBox {
             VStack(alignment: .leading, spacing: 16) {
-                // 顶部：说明文字 + 按钮
-                HStack(alignment: .top, spacing: 16) {
-                    // 左侧说明文字
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("配置 API Key 可获取更完整的数据。有免费 API 的数据源未配置时使用免费版，纯付费数据源未配置时跳过。")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-
-                        HStack(spacing: 12) {
-                            // 数据源状态
-                            HStack(spacing: 4) {
-                                Image(systemName: "checkmark.circle.fill")
-                                    .foregroundStyle(.green)
-                                    .font(.system(size: 12))
-                                Text("\(apiKeyManager.totalEnabledSourceCount) 个数据源可用")
-                                    .font(.caption)
-                                    .foregroundStyle(.green)
-                            }
-
-                            // API Key 配置状态
-                            HStack(spacing: 4) {
-                                Image(systemName: apiKeyManager.hasAnyAPIKey ? "key.fill" : "key")
-                                    .foregroundStyle(apiKeyManager.hasAnyAPIKey ? Color.blue : Color.secondary)
-                                    .font(.system(size: 12))
-                                Text("\(apiKeyManager.configuredKeyCount) 个 API Key 已配置")
-                                    .font(.caption)
-                                    .foregroundStyle(apiKeyManager.hasAnyAPIKey ? Color.blue : Color.secondary)
-                            }
-                        }
-                    }
-                    .frame(maxWidth: .infinity, alignment: .leading)
-
-                    // 右侧按钮
-                    HStack(spacing: 8) {
-                        Button("清除全部") {
-                            apiKeyManager.clearAllAPIKeys()
-                        }
-                        .buttonStyle(.borderedProminent)
-                        .tint(.orange)
-
-                        Button("保存配置") {
-                            apiKeyManager.saveAPIKeys()
-                        }
-                        .adaptiveGlassProminentButtonStyle()
-                    }
-                }
-
-                Divider()
-
                 // 有免费 API 的数据源（配置后使用付费版）
                 VStack(alignment: .leading, spacing: 12) {
-                    Text("有免费 API（配置 Key 后使用付费版，数据更全）")
+                    Text("支持免费访问")
                         .font(.caption)
                         .fontWeight(.medium)
                         .foregroundStyle(.secondary)
@@ -399,7 +362,7 @@ struct SettingsView: View {
 
                 // 纯付费数据源
                 VStack(alignment: .leading, spacing: 12) {
-                    Text("纯付费数据源（未配置时跳过）")
+                    Text("付费数据源")
                         .font(.caption)
                         .fontWeight(.medium)
                         .foregroundStyle(.secondary)
@@ -431,12 +394,30 @@ struct SettingsView: View {
             }
             .padding(DesignSystem.Spacing.standard)
         } label: {
-            SectionHeader(
-                title: "IP 质量检测设置",
-                icon: "network",
-                iconColor: .blue,
-                description: "数据源 API Key 配置"
-            )
+            HStack(alignment: .top, spacing: DesignSystem.Spacing.standard) {
+                SectionHeader(
+                    title: "IP 质量数据源",
+                    icon: "network",
+                    iconColor: .blue,
+                    description: "配置第三方数据源凭据；未配置时使用免费版或跳过付费源"
+                )
+
+                Spacer()
+
+                HStack(spacing: DesignSystem.Spacing.small) {
+                    Button("清除全部") {
+                        apiKeyManager.clearAllAPIKeys()
+                    }
+                    .adaptiveGlassButtonStyle()
+                    .disabled(!apiKeyManager.hasAnyAPIKey)
+
+                    Button("保存配置") {
+                        apiKeyManager.saveAPIKeys()
+                    }
+                    .adaptiveGlassProminentButtonStyle()
+                }
+                .padding(.bottom, DesignSystem.Spacing.small)
+            }
         }
     }
 
@@ -444,109 +425,58 @@ struct SettingsView: View {
 
     private var permissionsSection: some View {
         GroupBox {
-            VStack(spacing: 12) {
-                ForEach(Array(permissionManager.permissions.enumerated()), id: \.element.type.displayName) { _, permission in
-                    VStack(alignment: .leading, spacing: 8) {
-                        // 第一行：图标 + 名称 + 状态 + 按钮
-                        HStack {
-                            Image(systemName: permission.isGranted ? "checkmark.circle.fill" : "xmark.circle.fill")
-                                .foregroundStyle(Color(permission.statusColor))
-                                .font(.system(size: 14))
+            VStack(alignment: .leading, spacing: DesignSystem.Spacing.medium) {
+                ForEach(Array(permissionManager.permissions.enumerated()), id: \.element.type.displayName) { index, permission in
+                    if index > 0 {
+                        Divider()
+                    }
 
+                    HStack(spacing: DesignSystem.Spacing.medium) {
+                        Image(systemName: permission.isGranted ? "checkmark.circle.fill" : "exclamationmark.circle.fill")
+                            .foregroundStyle(Color(permission.statusColor))
+                            .font(.system(size: 14))
+
+                        VStack(alignment: .leading, spacing: DesignSystem.Spacing.extraSmall) {
                             Text(permission.type.displayName)
                                 .font(.system(size: 14, weight: .medium))
-
-                            Spacer()
-
-                            Text(permission.statusText)
+                            Text(permission.isGranted ? permission.type.description : permission.type.guideText)
                                 .font(.caption)
-                                .foregroundStyle(Color(permission.statusColor))
+                                .foregroundStyle(permission.isGranted ? Color.secondary : Color.orange)
+                        }
 
-                            // 操作按钮
-                            switch permission.type {
-                            case .accessibility:
-                                if !permission.isGranted && permission.isRequired {
-                                    Button("打开设置") {
-                                        permissionManager.openAccessibilitySettings()
-                                    }
-                                    .adaptiveGlassProminentButtonStyle()
-                                    .controlSize(.small)
+                        Spacer()
+
+                        Text(permission.statusText)
+                            .font(.caption)
+                            .foregroundStyle(Color(permission.statusColor))
+
+                        switch permission.type {
+                        case .accessibility:
+                            if !permission.isGranted && permission.isRequired {
+                                Button("打开设置") {
+                                    permissionManager.openAccessibilitySettings()
                                 }
-                            case .helperTool:
-                                // Helper Tool 始终显示操作按钮（安装或卸载）
-                                HelperActionButton(
-                                    dnsManager: dnsManager,
-                                    networkMonitor: networkMonitor,
-                                    isInstalled: permission.isGranted
-                                )
+                                .adaptiveGlassProminentButtonStyle()
+                                .controlSize(.small)
                             }
-                        }
-
-                        // 第二行：描述
-                        Text(permission.type.description)
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                            .padding(.leading, 20)
-
-                        Divider()
-                            .padding(.leading, 20)
-
-                        // 第三行：提示文字
-                        if permission.isGranted {
-                            Text(successText(for: permission.type))
-                                .font(.caption)
-                                .foregroundStyle(.green)
-                                .padding(.leading, 20)
-                        } else {
-                            Text(permission.type.guideText)
-                                .font(.caption)
-                                .foregroundStyle(.orange)
-                                .padding(.leading, 20)
+                        case .helperTool:
+                            HelperActionButton(
+                                dnsManager: dnsManager,
+                                networkMonitor: networkMonitor,
+                                isInstalled: permission.isGranted
+                            )
                         }
                     }
-                    .padding()
-                    .background(Color(nsColor: .controlBackgroundColor))
-                    .clipShape(RoundedRectangle(cornerRadius: DesignSystem.CornerRadius.medium))
                 }
             }
+            .padding(DesignSystem.Spacing.standard)
         } label: {
-            HStack {
-                SectionHeader(
-                    title: "权限状态",
-                    icon: "lock.shield",
-                    iconColor: permissionManager.allRequiredGranted ? .green : .orange,
-                    description: "NetCue 所需的系统权限"
-                )
-                Spacer()
-                HStack(spacing: 8) {
-                    if permissionManager.allRequiredGranted {
-                        Image(systemName: "checkmark.shield.fill")
-                            .foregroundStyle(.green)
-                            .font(.system(size: 12))
-                        Text("所有必需权限已授权，功能正常")
-                            .font(.caption)
-                            .foregroundStyle(.green)
-                    } else {
-                        Image(systemName: "exclamationmark.triangle.fill")
-                            .foregroundStyle(.orange)
-                            .font(.system(size: 12))
-                        Text("部分必需权限未授权，某些功能可能无法正常使用")
-                            .font(.caption)
-                            .foregroundStyle(.orange)
-                    }
-                }
-            }
-        }
-    }
-
-    // MARK: - Private Methods
-
-    private func successText(for type: PermissionType) -> String {
-        switch type {
-        case .accessibility:
-            return "辅助功能权限已授权，网络控制功能可以正常使用"
-        case .helperTool:
-            return "DNS Helper 已安装，DNS 管理功能可以正常使用"
+            SectionHeader(
+                title: "权限",
+                icon: "lock.shield",
+                iconColor: permissionManager.allRequiredGranted ? .green : .orange,
+                description: "NetCue 所需的系统权限"
+            )
         }
     }
 }
@@ -570,13 +500,12 @@ private struct HelperActionButton: View {
     var body: some View {
         Group {
             if isInstalled {
-                Button {
+                Button(role: .destructive) {
                     uninstallHelper()
                 } label: {
                     buttonLabel
                 }
-                .adaptiveGlassProminentButtonStyle()
-                .tint(.red)
+                .adaptiveGlassButtonStyle()
             } else {
                 Button {
                     installHelper()

@@ -26,9 +26,6 @@ struct ContentView: View {
     /// - 替代原 AppCoordinator，解决 P1-2 架构问题
     @Environment(WindowCoordinator.self) var windowCoordinator
 
-    /// Mihomo 视图模型（从 NetCueApp 注入）
-    @Environment(MihomoViewModel.self) var mihomoViewModel
-
     // MARK: - Global Coordinator
 
     /// 绑定全局状态协调器
@@ -43,64 +40,30 @@ struct ContentView: View {
     // MARK: - Body
 
     var body: some View {
-        VStack(spacing: 0) {
-            // 内容区域
-            Group {
-                switch selectedTab.wrappedValue {
-                case 0:
-                    NetworkMonitorView()
-                case 1:
-                    NetworkToolsView()
-                case 2:
-                    MihomoView()
-                case 3:
-                    LogView()
-                case 4:
-                    SettingsView()
-                case 5:
-                    AboutView()
-                default:
-                    NetworkMonitorView()
-                }
+        NavigationSplitView(columnVisibility: .constant(.all)) {
+            NavigationSidebar(selectedTab: selectedTab)
+                .navigationSplitViewColumnWidth(min: 210, ideal: 210, max: 210)
+        } detail: {
+            GeometryReader { proxy in
+                selectedContent
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .padding(
+                        .top,
+                        usesWindowToolbar
+                            ? 0
+                            : DesignSystem.Spacing.small - proxy.safeAreaInsets.top
+                    )
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
-        .frame(minHeight: 696)
+        .navigationSplitViewStyle(.balanced)
+        .frame(minHeight: 720)
         .buttonBorderShape(.capsule)
         .toolbar(removing: .title)
-        .toolbar {
-            ToolbarItem(placement: .principal) {
-                Picker("", selection: selectedTab) {
-                    Text("网络控制").tag(0)
-                    Text("网络工具").tag(1)
-                    Text("Mihomo").tag(2)
-                    Text("日志").tag(3)
-                    Text("设置").tag(4)
-                    Text("关于").tag(5)
-                }
-                .pickerStyle(.segmented)
-                .labelsHidden()
-            }
-
-            // 刷新按钮（仅 Mihomo Tab 显示）
-            ToolbarItem(placement: .primaryAction) {
-                if selectedTab.wrappedValue == 2 {
-                    Button {
-                        mihomoViewModel.refreshStatus()
-                    } label: {
-                        if mihomoViewModel.isRefreshing {
-                            ProgressView()
-                                .controlSize(.small)
-                        } else {
-                            Image(systemName: "arrow.clockwise")
-                        }
-                    }
-                    .adaptiveGlassButtonStyle()
-                    .help("刷新状态")
-                    .disabled(mihomoViewModel.isRefreshing)
-                }
-            }
-        }
+        .toolbar(removing: .sidebarToggle)
+        .toolbarBackgroundVisibility(
+            usesWindowToolbar ? .visible : .hidden,
+            for: .windowToolbar
+        )
         .overlay(alignment: .top) {
             // 全局 Toast 提示（在 Toolbar 下方显示）
             ToastOverlay()
@@ -124,6 +87,35 @@ struct ContentView: View {
                     AppLogger.debug("主窗口 identifier 已设置（通过 windows.last）: main")
                 }
             }
+        }
+    }
+
+    private var usesWindowToolbar: Bool {
+        switch selectedTab.wrappedValue {
+        case 3, 5:
+            return true
+        default:
+            return false
+        }
+    }
+
+    @ViewBuilder
+    private var selectedContent: some View {
+        switch selectedTab.wrappedValue {
+        case 0:
+            NetworkMonitorView()
+        case 1:
+            NetworkToolsView()
+        case 2:
+            MihomoView()
+        case 3:
+            LogView()
+        case 4:
+            SettingsView()
+        case 5:
+            AboutView()
+        default:
+            NetworkMonitorView()
         }
     }
 }

@@ -14,7 +14,7 @@ import SwiftUI
 /// - GroupBox 2: 应用控制 - 展示应用控制的当前状态（匹配场景、控制应用）
 /// - GroupBox 3: DNS控制 - 展示DNS控制的当前状态（匹配场景、DNS）
 /// - Picker + 添加场景按钮（不在GroupBox内）
-/// - GroupBox 4: 场景列表 - 根据Picker选择显示应用控制或DNS控制场景列表
+/// - 场景列表 - 根据Picker选择显示应用控制或DNS控制场景列表
 ///
 /// ## 数据流
 /// - 应用控制场景：NetworkScene -> SceneStorage -> NetworkMonitor.updateScenes()
@@ -68,8 +68,8 @@ struct NetworkMonitorView: View {
                 // Picker + 添加场景按钮（不在GroupBox内）
                 sceneTypeSelector
 
-                // GroupBox 4: 场景列表
-                sceneListGroupBox
+                // 场景列表（每个场景独立显示为卡片）
+                sceneList
             }
             .padding(DesignSystem.Spacing.standard)
         }
@@ -148,11 +148,17 @@ struct NetworkMonitorView: View {
                     }
                 }
 
+                Divider()
+
                 // 网关 IP
                 InfoRow(label: "网关 IP", value: networkMonitor.currentRouterIP)
 
+                Divider()
+
                 // 网关 MAC
                 InfoRow(label: "网关 MAC", value: networkMonitor.currentRouterMAC)
+
+                Divider()
 
                 // 当前 DNS
                 HStack {
@@ -222,7 +228,8 @@ struct NetworkMonitorView: View {
                         }
                     }
                 }
-                .frame(minHeight: 20)
+
+                Divider()
 
                 // 控制应用
                 HStack(alignment: .top) {
@@ -254,7 +261,6 @@ struct NetworkMonitorView: View {
                         }
                     }
                 }
-                .frame(minHeight: 20)
             }
             .padding()
         } label: {
@@ -284,7 +290,8 @@ struct NetworkMonitorView: View {
                             .fontWeight(.medium)
                     }
                 }
-                .frame(minHeight: 20)
+
+                Divider()
 
                 // DNS（显示匹配场景配置的 DNS，而非系统当前 DNS）
                 HStack {
@@ -319,7 +326,6 @@ struct NetworkMonitorView: View {
                             .fontWeight(.medium)
                     }
                 }
-                .frame(minHeight: 20)
             }
             .padding()
         } label: {
@@ -355,11 +361,11 @@ struct NetworkMonitorView: View {
         }
     }
 
-    // MARK: - GroupBox 4: 场景列表
+    // MARK: - 场景列表
 
     /// 场景列表（根据选择显示不同类型）
-    private var sceneListGroupBox: some View {
-        GroupBox {
+    private var sceneList: some View {
+        Group {
             if selectedSceneType == .appControl {
                 appSceneList
             } else {

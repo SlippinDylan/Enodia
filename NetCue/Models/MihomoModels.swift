@@ -38,16 +38,6 @@ struct MihomoConfig: Codable, Equatable {
         kernelFilenameTemplate: "mihomo-darwin-arm64-alpha-smart"
     )
 
-    /// 内核相关配置（路径、下载源）是否仍为默认值
-    ///
-    /// 与是否关联应用无关——关联应用的设置入口在"设置"页面，
-    /// 不应受 Mihomo 页面"重置配置"按钮的影响，因此单独判断。
-    var isKernelConfigDefault: Bool {
-        kernelPath == Self.default.kernelPath &&
-        githubReleasesURL == Self.default.githubReleasesURL &&
-        kernelFilenameTemplate == Self.default.kernelFilenameTemplate
-    }
-
     /// 是否已关联应用
     var hasAssociatedApp: Bool {
         !appBundlePath.isEmpty

@@ -73,9 +73,9 @@ struct NetCueApp: App {
                 .environment(mihomoViewModel)  // 注入 Mihomo 视图模型
                 .environment(windowCoordinator)  // 注入窗口协调器
                 .navigationTitle("")
-                .frame(minWidth: 960, minHeight: 696)
+                .frame(minWidth: 1080, minHeight: 720)
         }
-        .defaultSize(width: 960, height: 696)
+        .defaultSize(width: 1080, height: 720)
         .commandsRemoved()  // ✅ 移除 "File > New Window" 菜单（防止用户手动创建多窗口）
     }
 }

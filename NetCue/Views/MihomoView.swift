@@ -26,6 +26,26 @@ struct MihomoView: View {
             .padding()
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .overlay(alignment: .topTrailing) {
+            refreshButton
+                .padding(DesignSystem.Spacing.standard)
+        }
+    }
+
+    private var refreshButton: some View {
+        Button {
+            viewModel.refreshStatus()
+        } label: {
+            if viewModel.isRefreshing {
+                ProgressView()
+                    .controlSize(.small)
+            } else {
+                Image(systemName: "arrow.clockwise")
+            }
+        }
+        .adaptiveGlassButtonStyle()
+        .help("刷新状态")
+        .disabled(viewModel.isRefreshing)
     }
 }
 
@@ -143,9 +163,14 @@ struct KernelManagementCard: View {
 
     var body: some View {
         GroupBox {
-            VStack(alignment: .leading, spacing: 16) {
-                // 操作按钮（始终显示）
-                HStack(spacing: 12) {
+            VStack(alignment: .leading, spacing: DesignSystem.Spacing.standard) {
+                HStack(alignment: .center, spacing: DesignSystem.Spacing.standard) {
+                    Text("保存当前内核副本，供后续恢复使用")
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
+
+                    Spacer()
+
                     Button("备份内核") {
                         viewModel.backupKernel()
                     }
@@ -156,16 +181,16 @@ struct KernelManagementCard: View {
                         viewModel.config.kernelPath.isEmpty ||
                         viewModel.kernelStatus?.backupExists == true
                     )
+                }
 
-                    Button("替换内核") {
-                        viewModel.replaceKernel()
-                    }
-                    .adaptiveGlassProminentButtonStyle()
-                    .disabled(
-                        viewModel.isLoading ||
-                        viewModel.isDownloading ||
-                        viewModel.config.kernelPath.isEmpty
-                    )
+                Divider()
+
+                HStack(alignment: .center, spacing: DesignSystem.Spacing.standard) {
+                    Text("使用已备份的文件恢复当前内核")
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
+
+                    Spacer()
 
                     Button("恢复内核") {
                         viewModel.restoreKernel()
@@ -176,17 +201,34 @@ struct KernelManagementCard: View {
                         viewModel.isDownloading ||
                         viewModel.kernelStatus?.backupExists != true
                     )
-
-                    Spacer()
                 }
 
-                // 下载进度区域（仅在下载时显示）
+                Divider()
+
+                HStack(alignment: .center, spacing: DesignSystem.Spacing.standard) {
+                    Text("从 GitHub 下载最新预发布版本并替换当前内核")
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
+
+                    Spacer()
+
+                    Button("替换内核") {
+                        viewModel.replaceKernel()
+                    }
+                    .adaptiveGlassProminentButtonStyle()
+                    .disabled(
+                        viewModel.isLoading ||
+                        viewModel.isDownloading ||
+                        viewModel.config.kernelPath.isEmpty
+                    )
+                }
+
                 if viewModel.isDownloading {
                     Divider()
 
-                    VStack(alignment: .leading, spacing: 12) {
+                    VStack(alignment: .leading, spacing: DesignSystem.Spacing.medium) {
                         HStack {
-                            VStack(alignment: .leading, spacing: 4) {
+                            VStack(alignment: .leading, spacing: DesignSystem.Spacing.extraSmall) {
                                 Text("下载内核")
                                     .font(.callout)
                                     .fontWeight(.medium)
@@ -206,7 +248,6 @@ struct KernelManagementCard: View {
                             }
                         }
 
-                        // 下载进度条
                         if viewModel.downloadProgress > 0 {
                             ProgressView(value: viewModel.downloadProgress)
                                 .progressViewStyle(.linear)
@@ -214,7 +255,7 @@ struct KernelManagementCard: View {
                     }
                 }
             }
-            .padding()
+            .padding(DesignSystem.Spacing.standard)
         } label: {
             SectionHeader(
                 title: "内核替换",
@@ -235,47 +276,6 @@ struct ConfigurationCard: View {
         @Bindable var viewModel = viewModel
         GroupBox {
             VStack(alignment: .leading, spacing: 16) {
-                // 顶部：说明文字 + 按钮
-                HStack(alignment: .top, spacing: 16) {
-                    // 左侧说明
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("自定义内核路径和下载源，配置将保存在本地。")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-
-                        // 配置状态
-                        HStack(spacing: 12) {
-                            HStack(spacing: 4) {
-                                Image(systemName: viewModel.config.isKernelConfigDefault ? "arrow.counterclockwise.circle" : "pencil.circle.fill")
-                                    .foregroundStyle(viewModel.config.isKernelConfigDefault ? Color.secondary : Color.blue)
-                                    .font(.system(size: 12))
-                                Text(viewModel.config.isKernelConfigDefault ? "使用默认配置" : "已自定义配置")
-                                    .font(.caption)
-                                    .foregroundStyle(viewModel.config.isKernelConfigDefault ? Color.secondary : Color.blue)
-                            }
-                        }
-                    }
-                    .frame(maxWidth: .infinity, alignment: .leading)
-
-                    // 右侧按钮
-                    HStack(spacing: 8) {
-                        Button("重置配置") {
-                            viewModel.resetConfig()
-                        }
-                        .buttonStyle(.borderedProminent)
-                        .tint(.orange)
-                        .disabled(viewModel.isLoading || viewModel.isDownloading)
-
-                        Button("保存配置") {
-                            viewModel.saveConfig()
-                        }
-                        .adaptiveGlassProminentButtonStyle()
-                        .disabled(viewModel.isLoading || viewModel.isDownloading)
-                    }
-                }
-
-                Divider()
-
                 // 内核路径（点击拉起访达选择文件）
                 VStack(alignment: .leading, spacing: 8) {
                     Text("内核文件路径")
@@ -360,7 +360,31 @@ struct ConfigurationCard: View {
             }
             .padding(DesignSystem.Spacing.standard)
         } label: {
-            SectionHeader(title: "配置", icon: "gear.circle.fill", iconColor: .gray)
+            HStack(alignment: .top, spacing: DesignSystem.Spacing.standard) {
+                SectionHeader(
+                    title: "配置",
+                    icon: "gear.circle.fill",
+                    iconColor: .gray,
+                    description: "自定义内核路径和下载源，配置将保存在本地"
+                )
+
+                Spacer()
+
+                HStack(spacing: DesignSystem.Spacing.small) {
+                    Button("重置配置") {
+                        viewModel.resetConfig()
+                    }
+                    .adaptiveGlassButtonStyle()
+                    .disabled(viewModel.isLoading || viewModel.isDownloading)
+
+                    Button("保存配置") {
+                        viewModel.saveConfig()
+                    }
+                    .adaptiveGlassProminentButtonStyle()
+                    .disabled(viewModel.isLoading || viewModel.isDownloading)
+                }
+                .padding(.bottom, DesignSystem.Spacing.small)
+            }
         }
     }
 }
